@@ -1,16 +1,6 @@
 export interface ClickHouseConfig {
-  /** The ClickHouse server URL */
+  /** The environment variable name for the ClickHouse server URL */
   url: string;
-  
-  /** Database name */
-  database: string;
-  
-  /** Authentication username */
-  username?: string;
-  
-  /** Authentication password */
-  password?: string;
-  
   /** Connection timeout in milliseconds */
   timeout?: number;
   

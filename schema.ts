@@ -45,6 +45,23 @@ import {
   createPartitionBy
 } from "./packages/core/src";
 import { JSONType } from "./packages/core/src/schema/types/base";
+import type { ClickHouseConfig } from "./packages/core/src/config";
+import { defaultConfig } from "./packages/core/src/config";
+
+// ==========================================
+// SECTION 0: Database Configuration
+// ==========================================
+
+export const databaseConfig: ClickHouseConfig = {
+  url: "DATABASE_URL",
+  ...defaultConfig,
+  settings: {
+    ...defaultConfig.settings,
+    // Add any database-specific settings here
+    'database_atomic_delay_before_drop_table_sec': 5,
+    'max_partitions_per_insert_block': 100,
+  }
+};
 
 // ==========================================
 // SECTION 1: Shared Enum Definitions
