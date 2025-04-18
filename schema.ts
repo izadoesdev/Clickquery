@@ -1,89 +1,229 @@
 import {
-  Bool,
-  DateType,
-  Int32,
-  Float64,
-  ArrayType,
-  TupleType,
-  Nullable,
+  // Base types
   Str,
-  Enum8,
+  UUID,
+  Bool,
+  DateTime,
+  DateTime64,
+  DateType,
+  Date32,
+  JSON,
+  LowCardinality,
   id,
   timestamp,
+  
+  // Numeric types
+  Int8,
+  Int16,
+  Int32,
+  Int64,
+  UInt8,
+  UInt16,
+  UInt32,
+  UInt64,
+  Float32,
+  Float64,
+  Decimal,
+  Decimal64,
+  
+  // Complex types
+  ArrayType,
+  TupleType,
+  MapType,
+  FixedString,
+  
+  // Enum utilities
+  createEnum8,
+  createEnum16,
+  
+  // Engine and model definition
+  ClickHouseEngine,
   defineModel,
-  IDStrategy
+  
+  // ID strategies
+  IDStrategy,
+  
+  // Other utilities
+  now,
+  formatDateTime
 } from "./src";
-import { ClickHouseEngine } from "./src/schema/types/base";
 
-// Example table with default ID (UUIDv4)
+// ==========================================
+// SECTION 1: Shared Enum Definitions
+// ==========================================
+
+const UserRole = createEnum8({
+  admin: 10,
+  moderator: 5,
+  user: 1,
+  guest: 0
+});
+
+const UserStatus = createEnum8({
+  active: 1,
+  inactive: 0,
+  pending: 2,
+  suspended: 3,
+  banned: 4
+});
+
+const PaymentStatus = createEnum16({
+  created: 100,
+  authorized: 200,
+  pending: 300,
+  completed: 400,
+  failed: 500,
+  refunded: 600,
+  cancelled: 700
+});
+
+// ==========================================
+// SECTION 2: User Model
+// ==========================================
+
 export const User = defineModel({
   name: "users",
   columns: {
     id: id(),
-    username: Str({ default: "John Doe", unique: true }),
+    username: Str({ unique: true }),
+    email: Str({ nullable: true, unique: true }),
+    role: UserRole.type({ default: 'user' }),
+    status: UserStatus.type({ default: 'pending' }),
+    display_name: Str({ nullable: true }),
+    login_count: UInt32({ default: 0 }),
+    is_verified: Bool({ default: false }),
     created_at: timestamp(),
-    email: Nullable(Str()),
-    is_active: Bool({ default: true }),
-    age: Int32({ nullable: true }),
-    balance: Float64({ default: 0 }),
-    status: Enum8({
-      active: 1,
-      inactive: 0,
-      pending: 2,
-      banned: 3
-    }, { default: 'active' }),
-    tags: ArrayType(Str()),
-    profile: TupleType([Str(), Int32()]),
-    birthday: DateType({ nullable: true }),
+    updated_at: timestamp(),
+    last_login: DateTime({ nullable: true }),
+    favorite_tags: ArrayType(Str()),
+    notification_settings: JSON({
+      default: { email: true, push: true, sms: false }
+    }),
+    locale: LowCardinality(Str({ default: 'en-US' })),
+    metadata: MapType(Str(), Str()),
   },
   engine: ClickHouseEngine.MergeTree,
-  orderBy: ["created_at"],
+  orderBy: ["created_at", "id"],
+  partitionBy: "toYYYYMM(created_at)",
 });
 
-// Example table with NanoID
+// ==========================================
+// SECTION 3: Content with Complex Types
+// ==========================================
+
+export const Content = defineModel({
+  name: "content",
+  columns: {
+    id: id(),
+    user_id: UUID({ index: true }),
+    title: Str({ nullable: true }),
+    body: Str(),
+    slug: FixedString(64),
+    tags: ArrayType(Str()),
+    view_count: UInt64({ default: 0 }),
+    is_published: Bool({ default: true }),
+    location: TupleType([Float64(), Float64(), Float32()], { nullable: true }),
+    attributes: JSON(),
+    created_at: timestamp(),
+    updated_at: timestamp(),
+    relevance_score: Decimal(10, 4, { default: 0 }),
+  },
+  engine: ClickHouseEngine.ReplacingMergeTree,
+  orderBy: ["user_id", "created_at"],
+  partitionBy: "toYYYYMM(created_at)",
+});
+
+// ==========================================
+// SECTION 4: Analytics Event Tracking
+// ==========================================
+
 export const Event = defineModel({
   name: "events",
   columns: {
     id: id({ strategy: IDStrategy.NanoID, size: 16 }),
-    user_id: Str({ index: true }),
-    event_type: Str(),
-    created_at: timestamp(),
-    data: ArrayType(Str()),
+    session_id: Str({ index: true }),
+    user_id: UUID({ nullable: true, index: true }),
+    event_name: Str(),
+    timestamp: DateTime64({ precision: 6 }),
+    source: Str({ nullable: true }),
+    device_type: LowCardinality(Str({ nullable: true })),
+    properties: JSON({ nullable: true }),
+    duration_ms: UInt32({ nullable: true }),
+    value: Float64({ nullable: true }),
   },
   engine: ClickHouseEngine.MergeTree,
-  orderBy: ["created_at"],
+  orderBy: ["timestamp", "event_name"],
+  partitionBy: "toDate(timestamp)",
 });
 
-// Example table with UUIDv6 (time-based)
-export const Log = defineModel({
-  name: "logs",
+// ==========================================
+// SECTION 5: Payment Transactions
+// ==========================================
+
+export const Transaction = defineModel({
+  name: "transactions",
   columns: {
     id: id({ strategy: IDStrategy.UUIDv6 }),
-    level: Enum8({
-      info: 1,
-      warning: 2,
-      error: 3,
-      debug: 0,
-    }),
-    message: Str(),
+    user_id: UUID({ index: true }),
+    status: PaymentStatus.type({ default: 'created' }),
+    amount: Decimal64(4, { default: 0 }),
+    currency: LowCardinality(Str({ default: 'USD' })),
+    payment_method: Str(),
+    metadata: JSON({ nullable: true }),
     created_at: timestamp(),
-    context: Nullable(Str()),
+    completed_at: DateTime({ nullable: true }),
   },
-  engine: ClickHouseEngine.MergeTree,
-  orderBy: ["created_at"],
+  engine: ClickHouseEngine.VersionedCollapsingMergeTree,
+  orderBy: ["created_at", "user_id"],
+  partitionBy: "toYYYYMM(created_at)",
 });
 
-// Example with custom ID generator
-export const CustomEntity = defineModel({
-  name: "custom_entities",
+// ==========================================
+// SECTION 6: Metrics Aggregation
+// ==========================================
+
+export const DailyMetrics = defineModel({
+  name: "daily_metrics",
+  columns: {
+    date: DateType({ primaryKey: true }),
+    metric_name: Str({ primaryKey: true }),
+    dimension: Str({ default: 'overall', primaryKey: true }),
+    count: UInt64({ default: 0 }),
+    sum: Float64({ default: 0 }),
+    min: Float64({ nullable: true }),
+    max: Float64({ nullable: true }),
+    avg: Float64({ nullable: true }),
+  },
+  engine: ClickHouseEngine.SummingMergeTree,
+  orderBy: ["date", "metric_name", "dimension"],
+});
+
+// ==========================================
+// SECTION 7: System Logs with Custom ID
+// ==========================================
+
+export const SystemLog = defineModel({
+  name: "system_logs",
   columns: {
     id: id({
       strategy: IDStrategy.Custom,
-      customGenerator: () => `custom-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`
+      customGenerator: () => `log_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     }),
-    name: Str(),
-    created_at: timestamp(),
+    level: createEnum8({
+      debug: 0,
+      info: 1,
+      warning: 2,
+      error: 3,
+      critical: 4,
+    }).type(),
+    component: Str(),
+    message: Str(),
+    error_code: Int32({ nullable: true }),
+    user_id: UUID({ nullable: true }),
+    context: JSON({ nullable: true }),
+    timestamp: DateTime64({ precision: 6, default: now }),
   },
   engine: ClickHouseEngine.MergeTree,
-  orderBy: ["created_at"],
+  orderBy: ["timestamp", "level"],
+  partitionBy: "toDate(timestamp)",
 });

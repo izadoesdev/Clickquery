@@ -45,25 +45,70 @@ const db = createClient({
 ### 2. Define a Model (Schema)
 
 ```typescript
-import { defineModel, types } from "@clickquery/core";
+import { defineModel, Str, DateTime64, Float64, UUID, JSON, LowCardinality, ClickHouseEngine } from "@clickquery/core";
 
 export const Event = defineModel({
   name: "events",
   columns: {
-    id: types.UUID(),
-    timestamp: types.DateTime64(3),
-    user_id: types.LowCardinality(types.String()),
-    event_name: types.String(),
-    properties: types.JSON(),
-    value: types.Nullable(types.Float64()),
+    id: UUID(),
+    timestamp: DateTime64({ precision: 3 }),
+    user_id: LowCardinality(Str()),
+    event_name: Str(),
+    properties: JSON(),
+    value: Float64({ nullable: true }),
   },
-  engine: "MergeTree",
+  engine: ClickHouseEngine.MergeTree,
   orderBy: ["timestamp", "event_name"],
   partitionBy: "toYYYYMM(timestamp)",
 });
 ```
 
-### 3. Insert Data
+### 3. Define Shared Enums
+
+```typescript
+import { createEnum8, createEnum16 } from "@clickquery/core";
+
+// Define enums once and reuse them across schemas
+export const UserStatus = createEnum8({
+  active: 1,
+  inactive: 0,
+  pending: 2,
+  banned: 3
+});
+
+export const OrderStatus = createEnum16({
+  created: 0,
+  processing: 1,
+  completed: 2,
+  cancelled: 100,
+  refunded: 101,
+});
+
+// Use in schemas
+export const User = defineModel({
+  name: "users",
+  columns: {
+    // ...
+    status: UserStatus.type({ default: 'active' }),
+    // ...
+  },
+  engine: ClickHouseEngine.MergeTree,
+  // ...
+});
+
+export const Order = defineModel({
+  name: "orders",
+  columns: {
+    // ...
+    status: OrderStatus.type({ default: 'created' }),
+    // ...
+  },
+  engine: ClickHouseEngine.MergeTree,
+  // ...
+});
+```
+
+### 4. Insert Data
 
 ```typescript
 import { Event } from "./models";
@@ -78,7 +123,7 @@ await db.insert(Event, {
 });
 ```
 
-### 4. Query Data
+### 5. Query Data
 
 ```typescript
 import { Event } from "./models";
@@ -112,6 +157,7 @@ type EventRow = InferModelType<typeof Event>;
 
 - ClickHouse HTTP(S) Interface Support
 - Declarative Model Definition
+- Shared Enums Across Schemas
 - Fluent & Type-Safe Query Builder
 - Automatic Type Inference
 - ClickHouse Native Data Types
