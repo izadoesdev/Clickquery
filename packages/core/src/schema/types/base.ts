@@ -1,4 +1,4 @@
-import { generateID, IDOptions, IDStrategy, now } from '../../utils/index';
+import { z } from 'zod';
 
 export enum ClickHouseEngine {
   MergeTree = 'MergeTree',
@@ -8,185 +8,96 @@ export enum ClickHouseEngine {
   VersionedCollapsingMergeTree = 'VersionedCollapsingMergeTree',
 }
 
-export interface ColumnDefinition<T = any> {
-  _type: T;
-  clickhouseType: string;
-  isNullable?: boolean;
-  isLowCardinality?: boolean;
-  default?: T | (() => T);
+export type ColumnOptions = {
   nullable?: boolean;
-  optional?: boolean;
-  unique?: boolean;
-  primaryKey?: boolean;
-  index?: boolean;
-}
-
-/**
- * Options for column type definitions
- * 
- * @template T The type of values stored in the column
- * @property {T | (() => T)} [default] - Default value or function returning a value
- * @property {boolean} [nullable] - Whether the column can contain NULL values 
- *   (preferred over using the Nullable() wrapper)
- * @property {boolean} [optional] - Whether the column is optional in insert operations
- * @property {boolean} [unique] - Whether the column values should be unique
- * @property {boolean} [primaryKey] - Whether this column is part of the primary key
- * @property {boolean} [index] - Whether this column should be indexed
- */
-export type TypeOptions<T> = {
-  default?: T | (() => T);
-  nullable?: boolean;
-  optional?: boolean;
+  default?: unknown;
   unique?: boolean;
   primaryKey?: boolean;
   index?: boolean;
 };
 
-export function Str(options: TypeOptions<string> = {}): ColumnDefinition<string> {
+export type Column = {
+  type: string;
+  schema: z.ZodType;
+  options: ColumnOptions;
+};
+
+export function Str(options: ColumnOptions = {}) {
   return {
-    _type: '' as string,
-    clickhouseType: 'String',
-    ...options,
-    isNullable: options.nullable ?? false,
+    type: 'String',
+    schema: z.string(),
+    options
   };
 }
 
-export function UUID(options: TypeOptions<string> & { 
-  strategy?: IDStrategy | string;
-  size?: number;
-  customGenerator?: () => string;
-} = {}): ColumnDefinition<string> {
-  const { strategy, size, customGenerator, ...rest } = options;
-  const idOptions: IDOptions = { strategy, size, customGenerator };
-  
+export function UUID(options: ColumnOptions = {}) {
   return {
-    _type: '' as string,
-    clickhouseType: 'UUID',
-    ...rest,
-    isNullable: rest.nullable ?? false,
+    type: 'UUID',
+    schema: z.string().uuid(),
+    options
   };
 }
 
-export function Bool(options: TypeOptions<boolean> = {}): ColumnDefinition<boolean> {
+export function Bool(options: ColumnOptions = {}) {
   return {
-    _type: false as boolean,
-    clickhouseType: 'Boolean',
-    ...options,
-    isNullable: options.nullable ?? false,
+    type: 'Boolean',
+    schema: z.boolean(),
+    options
   };
 }
 
-export function DateTime(options: TypeOptions<Date> & { precision?: number } = {}): ColumnDefinition<Date> {
-  const { precision, ...rest } = options;
+export function DateTime(options: ColumnOptions = {}) {
   return {
-    _type: new Date(),
-    clickhouseType: `DateTime${precision ? `(${precision})` : ''}`,
-    ...rest,
-    isNullable: rest.nullable ?? false,
+    type: 'DateTime',
+    schema: z.date(),
+    options
   };
 }
 
-export function DateTime64(options: TypeOptions<Date> & { precision?: number } = {}): ColumnDefinition<Date> {
-  const { precision = 3, ...rest } = options;
-  if (precision < 0 || precision > 9) throw new Error('DateTime64 precision must be between 0 and 9');
+export function DateTime64(options: ColumnOptions = {}) {
   return {
-    _type: new Date(),
-    clickhouseType: `DateTime64(${precision})`,
-    ...rest,
-    isNullable: rest.nullable ?? false,
+    type: 'DateTime64',
+    schema: z.date(),
+    options
   };
 }
 
-export function DateType(options: TypeOptions<Date> = {}): ColumnDefinition<Date> {
+export function DateType(options: ColumnOptions = {}) {
   return {
-    _type: new Date(),
-    clickhouseType: 'Date',
-    ...options,
-    isNullable: options.nullable ?? false,
+    type: 'Date',
+    schema: z.date(),
+    options
   };
 }
 
-export function Date32(options: TypeOptions<Date> = {}): ColumnDefinition<Date> {
+export function Date32(options: ColumnOptions = {}) {
   return {
-    _type: new Date(),
-    clickhouseType: 'Date32',
-    ...options,
-    isNullable: options.nullable ?? false,
+    type: 'Date32',
+    schema: z.date(),
+    options
   };
 }
 
-export function JSON<T = any>(options: TypeOptions<T> = {}): ColumnDefinition<T> {
+export function JSONType(options: ColumnOptions = {}) {
   return {
-    _type: {} as T,
-    clickhouseType: `Object('json')`,
-    ...options,
-    isNullable: options.nullable ?? false,
+    type: 'JSON',
+    schema: z.any(),
+    options
   };
 }
 
-/**
- * Makes a column type nullable.
- * 
- * @deprecated For consistency, please use the `{ nullable: true }` option instead:
- * ```
- * // Instead of: Nullable(Str())
- * // Use: Str({ nullable: true })
- * ```
- * 
- * This wrapper is kept for backward compatibility but may be removed in future versions.
- */
-export function Nullable<TDef extends ColumnDefinition<any>>(
-  typeDefinition: TDef
-): ColumnDefinition<TDef['_type'] | null> {
+export function id(options: ColumnOptions = {}) {
   return {
-    ...typeDefinition,
-    _type: null as TDef['_type'] | null,
-    clickhouseType: `Nullable(${typeDefinition.clickhouseType})`,
-    isNullable: true,
-    nullable: true,
+    type: 'UUID',
+    schema: z.string().uuid(),
+    options: { ...options, primaryKey: true }
   };
 }
 
-export function LowCardinality<TDef extends ColumnDefinition<any>>(
-  typeDefinition: TDef
-): ColumnDefinition<TDef['_type']> {
+export function timestamp(options: ColumnOptions = {}) {
   return {
-    ...typeDefinition,
-    clickhouseType: `LowCardinality(${typeDefinition.clickhouseType})`,
-    isLowCardinality: true,
+    type: 'DateTime',
+    schema: z.date(),
+    options: { ...options, index: true }
   };
-}
-
-/**
- * Helper for creating a UUID primary key with auto-generation
- * @returns A UUID column definition configured as primary key with auto-generation
- */
-export function id(options: Omit<TypeOptions<string>, 'primaryKey'> & {
-  strategy?: IDStrategy | string;
-  size?: number;
-  customGenerator?: () => string;
-} = {}): ColumnDefinition<string> {
-  const { strategy, size, customGenerator, ...rest } = options;
-  
-  return UUID({
-    ...rest,
-    strategy,
-    size,
-    customGenerator,
-    default: options.default ?? (() => generateID({ strategy, size, customGenerator })),
-    primaryKey: true,
-  });
-}
-
-/**
- * Helper for creating a DateTime column with current timestamp default
- * @returns A DateTime column definition with current timestamp default
- */
-export function timestamp(options: Omit<TypeOptions<Date>, 'default'> & { precision?: number, autoUpdate?: boolean } = {}): ColumnDefinition<Date> {
-  const { autoUpdate, ...rest } = options;
-  return DateTime({
-    ...rest,
-    default: now,
-    index: options.index ?? true,
-  });
 } 

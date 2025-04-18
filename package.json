@@ -11,13 +11,8 @@
     "test": "bun test"
   },
   "devDependencies": {
+    "@biomejs/biome": "1.9.4",
     "@types/node": "^22.14.1",
     "typescript": "^5.3.3"
-  },
-  "dependencies": {
-    "@clickhouse/client": "^1.11.1",
-    "crypto": "^1.0.1",
-    "nanoid": "^5.1.5",
-    "uuid": "^11.1.0"
   }
 }

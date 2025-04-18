@@ -1,31 +1,28 @@
-import { ColumnDefinition, ClickHouseEngine } from './types';
-import { OrderBy, PartitionBy } from './types/ordering';
+import type { ClickHouseEngine } from './types';
+import type { OrderBy, PartitionBy } from './types/ordering';
+import type { Column } from './types/base';
 
-export interface Model<TColumns extends Record<string, ColumnDefinition<any>>> {
+export interface Model {
   name: string;
-  columns: TColumns;
+  columns: Record<string, Column>;
   engine: ClickHouseEngine;
-  orderBy?: OrderBy<TColumns>;
-  partitionBy?: PartitionBy<TColumns>;
-  primaryKey?: (keyof TColumns)[];
+  orderBy?: OrderBy;
+  partitionBy?: PartitionBy;
+  primaryKey?: string[];
 }
 
-export type DefineModelOptions<TColumns extends Record<string, ColumnDefinition<any>>> = {
+export type DefineModelOptions = {
   name: string;
-  columns: TColumns;
+  columns: Record<string, Column>;
   engine: ClickHouseEngine;
-  orderBy?: OrderBy<TColumns>;
-  partitionBy?: PartitionBy<TColumns>;
-  primaryKey?: (keyof TColumns)[];
+  orderBy?: OrderBy;
+  partitionBy?: PartitionBy;
+  primaryKey?: string[];
 };
 
-export function defineModel<TColumns extends Record<string, ColumnDefinition<any>>>(
-  options: DefineModelOptions<TColumns>
-): Model<TColumns> {
+export function defineModel(options: DefineModelOptions): Model {
   if (!options.name) throw new Error('Model name is required.');
   if (!options.columns || Object.keys(options.columns).length === 0) throw new Error('Model columns are required.');
   if (!options.engine) throw new Error('Model engine is required.');
   return { ...options };
 }
-
-export type { ColumnDefinition }; 

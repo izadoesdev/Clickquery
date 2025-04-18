@@ -1,58 +1,94 @@
-import { ColumnDefinition, TypeOptions } from './base';
+import { z } from 'zod';
+import type { Column, ColumnOptions } from './base';
 
-// Generic numeric type factory
-function intFactory<T extends number>(name: string) {
-  return (options: TypeOptions<T> = {}): ColumnDefinition<T> => ({
-    _type: 0 as T,
-    clickhouseType: name,
-    ...options,
-    isNullable: options.nullable ?? false,
-  });
-}
-
-// Integer types
-export const Int8 = intFactory<number>('Int8');
-export const Int16 = intFactory<number>('Int16');
-export const Int32 = intFactory<number>('Int32');
-export const Int64 = intFactory<number>('Int64');
-
-// Unsigned integer types
-export const UInt8 = intFactory<number>('UInt8');
-export const UInt16 = intFactory<number>('UInt16');
-export const UInt32 = intFactory<number>('UInt32');
-export const UInt64 = intFactory<number>('UInt64');
-
-// Floating point types
-export const Float32 = intFactory<number>('Float32');
-export const Float64 = intFactory<number>('Float64');
-
-// Decimal types with precision and scale
-export function Decimal(precision: number, scale: number, options: TypeOptions<number> = {}): ColumnDefinition<number> {
-  if (precision < 1 || precision > 76) {
-    throw new Error('Decimal precision must be between 1 and 76');
-  }
-  if (scale < 0 || scale > precision) {
-    throw new Error('Decimal scale must be between 0 and precision');
-  }
-  
+export function Int8(options: ColumnOptions = {}): Column {
   return {
-    _type: 0,
-    clickhouseType: `Decimal(${precision}, ${scale})`,
-    ...options,
-    isNullable: options.nullable ?? false,
+    type: 'Int8',
+    schema: z.number().int().min(-128).max(127),
+    options
   };
 }
 
-// Decimal64 is a special case with 18 digits precision
-export function Decimal64(scale: number, options: TypeOptions<number> = {}): ColumnDefinition<number> {
-  if (scale < 0 || scale > 18) {
-    throw new Error('Decimal64 scale must be between 0 and 18');
-  }
-  
+export function Int16(options: ColumnOptions = {}): Column {
   return {
-    _type: 0,
-    clickhouseType: `Decimal64(${scale})`,
-    ...options,
-    isNullable: options.nullable ?? false,
+    type: 'Int16',
+    schema: z.number().int().min(-32768).max(32767),
+    options
   };
+}
+
+export function Int32(options: ColumnOptions = {}): Column {
+  return {
+    type: 'Int32',
+    schema: z.number().int().min(-2147483648).max(2147483647),
+    options
+  };
+}
+
+export function Int64(options: ColumnOptions = {}): Column {
+  return {
+    type: 'Int64',
+    schema: z.bigint(),
+    options
+  };
+}
+
+export function UInt8(options: ColumnOptions = {}): Column {
+  return {
+    type: 'UInt8',
+    schema: z.number().int().min(0).max(255),
+    options
+  };
+}
+
+export function UInt16(options: ColumnOptions = {}): Column {
+  return {
+    type: 'UInt16',
+    schema: z.number().int().min(0).max(65535),
+    options
+  };
+}
+
+export function UInt32(options: ColumnOptions = {}): Column {
+  return {
+    type: 'UInt32',
+    schema: z.number().int().min(0).max(4294967295),
+    options
+  };
+}
+
+export function UInt64(options: ColumnOptions = {}): Column {
+  return {
+    type: 'UInt64',
+    schema: z.bigint().min(0n),
+    options
+  };
+}
+
+export function Float32(options: ColumnOptions = {}): Column {
+  return {
+    type: 'Float32',
+    schema: z.number(),
+    options
+  };
+}
+
+export function Float64(options: ColumnOptions = {}): Column {
+  return {
+    type: 'Float64',
+    schema: z.number(),
+    options
+  };
+}
+
+export function Decimal(precision: number, scale: number, options: ColumnOptions = {}): Column {
+  return {
+    type: `Decimal(${precision}, ${scale})`,
+    schema: z.number().multipleOf(1 / (10 ** scale)),
+    options
+  };
+}
+
+export function Decimal64(precision: number, options: ColumnOptions = {}): Column {
+  return Decimal(precision, 4, options);
 } 

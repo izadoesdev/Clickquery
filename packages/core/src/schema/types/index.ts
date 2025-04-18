@@ -1,8 +1,5 @@
 // Re-export base types and interfaces
 export {
-  ColumnDefinition,
-  TypeOptions,
-  ClickHouseEngine,
   Str,
   UUID,
   Bool,
@@ -10,11 +7,10 @@ export {
   DateTime64,
   DateType,
   Date32,
-  JSON,
-  Nullable,
-  LowCardinality,
+  JSONType,
   id,
   timestamp,
+  ClickHouseEngine
 } from './base';
 
 // Re-export numeric types
@@ -43,7 +39,6 @@ export {
 
 // Re-export enum types
 export {
-  EnumValues,
-  Enum8,
-  Enum16,
+  createEnum8,
+  createEnum16,
 } from './enum'; 

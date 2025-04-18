@@ -4,9 +4,6 @@ export { createOrderBy, createPartitionBy } from './schema/types/ordering';
 
 // Re-export all schema types
 export {
-  // Base types
-  ColumnDefinition,
-  TypeOptions,
   ClickHouseEngine,
   Str,
   UUID,
@@ -15,9 +12,6 @@ export {
   DateTime64,
   DateType,
   Date32,
-  JSON,
-  Nullable,
-  LowCardinality,
   id,
   timestamp,
   
@@ -40,21 +34,7 @@ export {
   TupleType,
   MapType,
   FixedString,
-  
-  // Enum types
-  EnumValues,
-  Enum8,
-  Enum16,
 } from './schema/types';
-
-// Re-export shared enum utilities
-export {
-  createEnum8,
-  createEnum16,
-  SharedEnum,
-  EnumType,
-} from './schema/shared';
-
 // Re-export all utilities
 export {
   // ID generation utilities
@@ -73,3 +53,6 @@ export {
   formatDateTime,
   formatDate,
 } from './utils/index';
+
+export { createClient } from './client';
+export type { ClickHouseConfig, QueryOptions, QueryResult } from './types/client';

@@ -7,8 +7,6 @@ import {
   DateTime64,
   DateType,
   Date32,
-  JSON,
-  LowCardinality,
   id,
   timestamp,
   
@@ -31,11 +29,6 @@ import {
   TupleType,
   MapType,
   FixedString,
-  
-  // Enum utilities
-  createEnum8,
-  createEnum16,
-  
   // Engine and model definition
   ClickHouseEngine,
   defineModel,
@@ -50,28 +43,29 @@ import {
   // Ordering utilities
   createOrderBy,
   createPartitionBy
-} from "./src";
+} from "./packages/core/src";
+import { JSONType } from "./packages/core/src/schema/types/base";
 
 // ==========================================
 // SECTION 1: Shared Enum Definitions
 // ==========================================
 
-const UserRole = createEnum8({
+const UserRole = {
   admin: 10,
   moderator: 5,
   user: 1,
   guest: 0
-});
+} as const;
 
-const UserStatus = createEnum8({
+const UserStatus = {
   active: 1,
   inactive: 0,
   pending: 2,
   suspended: 3,
   banned: 4
-});
+} as const;
 
-const PaymentStatus = createEnum16({
+const PaymentStatus = {
   created: 100,
   authorized: 200,
   pending: 300,
@@ -79,7 +73,7 @@ const PaymentStatus = createEnum16({
   failed: 500,
   refunded: 600,
   cancelled: 700
-});
+} as const;
 
 // ==========================================
 // SECTION 2: User Model
@@ -91,8 +85,8 @@ export const User = defineModel({
     id: id(),
     username: Str({ unique: true }),
     email: Str({ nullable: true, unique: true }),
-    role: UserRole.type({ default: 'user' }),
-    status: UserStatus.type({ default: 'pending' }),
+    role: Int8({ default: UserRole.user }),
+    status: Int8({ default: UserStatus.pending }),
     display_name: Str({ nullable: true }),
     login_count: UInt32({ default: 0 }),
     is_verified: Bool({ default: false }),
@@ -100,10 +94,10 @@ export const User = defineModel({
     updated_at: timestamp(),
     last_login: DateTime({ nullable: true }),
     favorite_tags: ArrayType(Str()),
-    notification_settings: JSON({
+    notification_settings: JSONType({
       default: { email: true, push: true, sms: false }
     }),
-    locale: LowCardinality(Str({ default: 'en-US' })),
+    locale: Str({ default: 'en-US' }),
     metadata: MapType(Str(), Str()),
   },
   engine: ClickHouseEngine.MergeTree,
@@ -130,7 +124,7 @@ export const Content = defineModel({
     view_count: UInt64({ default: 0 }),
     is_published: Bool({ default: true }),
     location: TupleType([Float64(), Float64(), Float32()], { nullable: true }),
-    attributes: JSON(),
+    attributes: JSONType(),
     created_at: timestamp(),
     updated_at: timestamp(),
     relevance_score: Decimal(10, 4, { default: 0 }),
@@ -150,14 +144,14 @@ export const Content = defineModel({
 export const Event = defineModel({
   name: "events",
   columns: {
-    id: id({ strategy: IDStrategy.NanoID, size: 16 }),
+    id: id(),
     session_id: Str({ index: true }),
     user_id: UUID({ nullable: true, index: true }),
     event_name: Str(),
-    timestamp: DateTime64({ precision: 6 }),
+    timestamp: DateTime64({ default: now }),
     source: Str({ nullable: true }),
-    device_type: LowCardinality(Str({ nullable: true })),
-    properties: JSON({ nullable: true }),
+    device_type: Str({ nullable: true }),
+    properties: JSONType({ nullable: true }),
     duration_ms: UInt32({ nullable: true }),
     value: Float64({ nullable: true }),
   },
@@ -176,13 +170,13 @@ export const Event = defineModel({
 export const Transaction = defineModel({
   name: "transactions",
   columns: {
-    id: id({ strategy: IDStrategy.UUIDv6 }),
+    id: id(),
     user_id: UUID({ index: true }),
-    status: PaymentStatus.type({ default: 'created' }),
+    status: Int16({ default: PaymentStatus.created }),
     amount: Decimal64(4, { default: 0 }),
-    currency: LowCardinality(Str({ default: 'USD' })),
+    currency: Str({ default: 'USD' }),
     payment_method: Str(),
-    metadata: JSON({ nullable: true }),
+    metadata: JSONType({ nullable: true }),
     created_at: timestamp(),
     completed_at: DateTime({ nullable: true }),
   },
@@ -222,28 +216,25 @@ export const DailyMetrics = defineModel({
 // SECTION 7: System Logs with Custom ID
 // ==========================================
 
-const level = createEnum8({
+const level = {
   debug: 0,
   info: 1,
   warning: 2,
   error: 3,
   critical: 4,
-});
+} as const;
 
 export const SystemLog = defineModel({
   name: "system_logs",
   columns: {
-    id: id({
-      strategy: IDStrategy.Custom,
-      customGenerator: () => `log_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-    }),
-    level: level.type(),
+    id: id(),
+    level: Int8({ default: level.info }),
     component: Str(),
     message: Str(),
     error_code: Int32({ nullable: true }),
     user_id: UUID({ nullable: true }),
-    context: JSON({ nullable: true }),
-    timestamp: DateTime64({ precision: 6, default: now }),
+    context: JSONType({ nullable: true }),
+    timestamp: DateTime64({ default: now }),
   },
   engine: ClickHouseEngine.MergeTree,
   orderBy: createOrderBy([

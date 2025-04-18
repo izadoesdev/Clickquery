@@ -1,74 +1,38 @@
-import { ColumnDefinition, TypeOptions } from './base';
+import { z } from 'zod';
+import type { Column, ColumnOptions } from './base';
 
-/**
- * Creates an Array type column
- * @param element The element type
- * @param options Type options
- * @returns An Array column definition
- */
-export function ArrayType<T, Def extends ColumnDefinition<T>>(
-  element: Def,
-  options: TypeOptions<T[]> = {}
-): ColumnDefinition<T[]> {
+export function ArrayType(elementType: Column, options: ColumnOptions = {}): Column {
   return {
-    _type: [] as T[],
-    clickhouseType: `Array(${element.clickhouseType})`,
-    ...options,
-    isNullable: options.nullable ?? false,
+    type: `Array(${elementType.type})`,
+    schema: z.array(elementType.schema),
+    options
   };
 }
 
-/**
- * Creates a Tuple type column
- * @param elements The element types
- * @param options Type options
- * @returns A Tuple column definition
- */
-export function TupleType<Defs extends ColumnDefinition<any>[]>(
-  elements: [...Defs],
-  options: TypeOptions<{ [K in keyof Defs]: Defs[K]['_type'] }> = {}
-): ColumnDefinition<{ [K in keyof Defs]: Defs[K]['_type'] }> {
-  const typesStr = elements.map(e => e.clickhouseType).join(', ');
+export function TupleType(elementTypes: Column[], options: ColumnOptions = {}): Column {
   return {
-    _type: [] as unknown as { [K in keyof Defs]: Defs[K]['_type'] },
-    clickhouseType: `Tuple(${typesStr})`,
-    ...options,
-    isNullable: options.nullable ?? false,
+    type: `Tuple(${elementTypes.map(t => t.type).join(', ')})`,
+    schema: z.tuple(elementTypes.map(t => t.schema) as [z.ZodType, ...z.ZodType[]]),
+    options
   };
 }
 
-/**
- * Creates a Map type column
- * @param keyType The key type
- * @param valueType The value type
- * @param options Type options
- * @returns A Map column definition
- */
-export function MapType<K, V, KDef extends ColumnDefinition<K>, VDef extends ColumnDefinition<V>>(
-  keyType: KDef,
-  valueType: VDef,
-  options: TypeOptions<Record<K & (string | number), V>> = {}
-): ColumnDefinition<Record<K & (string | number), V>> {
+export function MapType(keyType: Column, valueType: Column, options: ColumnOptions = {}): Column {
   return {
-    _type: {} as Record<K & (string | number), V>,
-    clickhouseType: `Map(${keyType.clickhouseType}, ${valueType.clickhouseType})`,
-    ...options,
-    isNullable: options.nullable ?? false,
+    type: `Map(${keyType.type}, ${valueType.type})`,
+    schema: z.record(keyType.schema, valueType.schema),
+    options
   };
 }
 
-/**
- * Creates a FixedString type column
- * @param n Length of the fixed string
- * @param options Type options
- * @returns A FixedString column definition
- */
-export function FixedString(n: number, options: TypeOptions<string> = {}): ColumnDefinition<string> {
-  if (n <= 0) throw new Error('FixedString length must be positive');
+export function FixedString(length: number, options: ColumnOptions = {}): Column {
+  if (length < 1 || length > 255) {
+    throw new Error('FixedString length must be between 1 and 255');
+  }
+  
   return {
-    _type: '' as string,
-    clickhouseType: `FixedString(${n})`,
-    ...options,
-    isNullable: options.nullable ?? false,
+    type: `FixedString(${length})`,
+    schema: z.string().length(length),
+    options
   };
 } 
