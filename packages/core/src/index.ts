@@ -1,5 +1,6 @@
 export { defineModel } from './schema/defineModel';
 export { InferModelType } from './types/infer';
+export { createOrderBy, createPartitionBy } from './schema/types/ordering';
 
 // Re-export all schema types
 export {

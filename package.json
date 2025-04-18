@@ -1,4 +1,19 @@
 {
+  "name": "clickquery",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run packages/core/build.ts && bun run packages/cli/build.ts",
+    "dev": "bun run --watch packages/core/src/index.ts",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "typescript": "^5.3.3"
+  },
   "dependencies": {
     "@clickhouse/client": "^1.11.1",
     "crypto": "^1.0.1",

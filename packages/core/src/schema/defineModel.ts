@@ -1,11 +1,12 @@
 import { ColumnDefinition, ClickHouseEngine } from './types';
+import { OrderBy, PartitionBy } from './types/ordering';
 
 export interface Model<TColumns extends Record<string, ColumnDefinition<any>>> {
   name: string;
   columns: TColumns;
   engine: ClickHouseEngine;
-  orderBy?: (keyof TColumns)[];
-  partitionBy?: string | ((columns: TColumns) => string);
+  orderBy?: OrderBy<TColumns>;
+  partitionBy?: PartitionBy<TColumns>;
   primaryKey?: (keyof TColumns)[];
 }
 
@@ -13,8 +14,8 @@ export type DefineModelOptions<TColumns extends Record<string, ColumnDefinition<
   name: string;
   columns: TColumns;
   engine: ClickHouseEngine;
-  orderBy?: (keyof TColumns)[];
-  partitionBy?: string | ((columns: TColumns) => string);
+  orderBy?: OrderBy<TColumns>;
+  partitionBy?: PartitionBy<TColumns>;
   primaryKey?: (keyof TColumns)[];
 };
 

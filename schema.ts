@@ -45,7 +45,11 @@ import {
   
   // Other utilities
   now,
-  formatDateTime
+  formatDateTime,
+
+  // Ordering utilities
+  createOrderBy,
+  createPartitionBy
 } from "./src";
 
 // ==========================================
@@ -103,8 +107,11 @@ export const User = defineModel({
     metadata: MapType(Str(), Str()),
   },
   engine: ClickHouseEngine.MergeTree,
-  orderBy: ["created_at", "id"],
-  partitionBy: "toYYYYMM(created_at)",
+  orderBy: createOrderBy([
+    { column: 'created_at', direction: 'DESC' },
+    { column: 'id', direction: 'ASC' }
+  ]),
+  partitionBy: createPartitionBy(columns => `toYYYYMM(${columns.created_at})`),
 });
 
 // ==========================================
@@ -129,8 +136,11 @@ export const Content = defineModel({
     relevance_score: Decimal(10, 4, { default: 0 }),
   },
   engine: ClickHouseEngine.ReplacingMergeTree,
-  orderBy: ["user_id", "created_at"],
-  partitionBy: "toYYYYMM(created_at)",
+  orderBy: createOrderBy([
+    { column: 'user_id', direction: 'ASC' },
+    { column: 'created_at', direction: 'DESC' }
+  ]),
+  partitionBy: createPartitionBy(columns => `toYYYYMM(${columns.created_at})`),
 });
 
 // ==========================================
@@ -152,8 +162,11 @@ export const Event = defineModel({
     value: Float64({ nullable: true }),
   },
   engine: ClickHouseEngine.MergeTree,
-  orderBy: ["timestamp", "event_name"],
-  partitionBy: "toDate(timestamp)",
+  orderBy: createOrderBy([
+    { column: 'timestamp', direction: 'DESC' },
+    { column: 'event_name', direction: 'ASC' }
+  ]),
+  partitionBy: createPartitionBy(columns => `toDate(${columns.timestamp})`),
 });
 
 // ==========================================
@@ -174,8 +187,11 @@ export const Transaction = defineModel({
     completed_at: DateTime({ nullable: true }),
   },
   engine: ClickHouseEngine.VersionedCollapsingMergeTree,
-  orderBy: ["created_at", "user_id"],
-  partitionBy: "toYYYYMM(created_at)",
+  orderBy: createOrderBy([
+    { column: 'created_at', direction: 'DESC' },
+    { column: 'user_id', direction: 'ASC' }
+  ]),
+  partitionBy: createPartitionBy(columns => `toYYYYMM(${columns.created_at})`),
 });
 
 // ==========================================
@@ -195,12 +211,24 @@ export const DailyMetrics = defineModel({
     avg: Float64({ nullable: true }),
   },
   engine: ClickHouseEngine.SummingMergeTree,
-  orderBy: ["date", "metric_name", "dimension"],
+  orderBy: createOrderBy([
+    { column: 'date', direction: 'DESC' },
+    { column: 'metric_name', direction: 'ASC' },
+    { column: 'dimension', direction: 'ASC' }
+  ]),
 });
 
 // ==========================================
 // SECTION 7: System Logs with Custom ID
 // ==========================================
+
+const level = createEnum8({
+  debug: 0,
+  info: 1,
+  warning: 2,
+  error: 3,
+  critical: 4,
+});
 
 export const SystemLog = defineModel({
   name: "system_logs",
@@ -209,13 +237,7 @@ export const SystemLog = defineModel({
       strategy: IDStrategy.Custom,
       customGenerator: () => `log_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     }),
-    level: createEnum8({
-      debug: 0,
-      info: 1,
-      warning: 2,
-      error: 3,
-      critical: 4,
-    }).type(),
+    level: level.type(),
     component: Str(),
     message: Str(),
     error_code: Int32({ nullable: true }),
@@ -224,6 +246,9 @@ export const SystemLog = defineModel({
     timestamp: DateTime64({ precision: 6, default: now }),
   },
   engine: ClickHouseEngine.MergeTree,
-  orderBy: ["timestamp", "level"],
-  partitionBy: "toDate(timestamp)",
+  orderBy: createOrderBy([
+    { column: 'timestamp', direction: 'DESC' },
+    { column: 'level', direction: 'ASC' }
+  ]),
+  partitionBy: createPartitionBy(columns => `toDate(${columns.timestamp})`),
 });

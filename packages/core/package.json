@@ -1,0 +1,25 @@
+{
+  "name": "@clickquery/core",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "dev": "bun run --watch src/index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@clickhouse/client": "^1.11.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "typescript": "^5.3.3"
+  }
+} 
