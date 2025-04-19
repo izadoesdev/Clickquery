@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "bun run --watch src/index.ts",
+    "migrate": "bun run src/schema/migration.ts",
     "test": "bun test"
   },
   "dependencies": {

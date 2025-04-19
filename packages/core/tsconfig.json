@@ -10,7 +10,7 @@
     "outDir": "dist",
     "rootDir": "src",
     "declaration": true,
-    "types": ["node"]
+    "types": ["node", "bun-types"]
   },
   "include": ["src/**/*", "../../src"],
   "exclude": ["node_modules", "dist"]

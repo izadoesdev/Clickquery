@@ -1,19 +1,13 @@
 import { z } from 'zod';
 
 export interface ClickHouseConfig {
-  host: string;
-  username: string;
-  password: string;
-  database: string;
+  url: string;
   clickhouse_settings?: Record<string, number>;
 }
 
 // Config validation
 export const ClickHouseConfigSchema = z.object({
-  host: z.string().url(),
-  username: z.string(),
-  password: z.string(),
-  database: z.string(),
+  url: z.string().url(),
   clickhouse_settings: z.record(z.number()).optional(),
 });
 

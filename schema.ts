@@ -53,7 +53,7 @@ import { defaultConfig } from "./packages/core/src/config";
 // ==========================================
 
 export const databaseConfig: ClickHouseConfig = {
-  url: "DATABASE_URL",
+  url: "CLICKHOUSE_URL",
   ...defaultConfig,
   settings: {
     ...defaultConfig.settings,

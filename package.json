@@ -8,11 +8,16 @@
   "scripts": {
     "build": "bun run packages/core/build.ts && bun run packages/cli/build.ts",
     "dev": "bun run --watch packages/core/src/index.ts",
+    "migrate": "bun run packages/core/src/schema/migration.ts",
     "test": "bun test"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "@types/node": "^22.14.1",
+    "bun-types": "^1.2.10",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "stream": "^0.0.3"
   }
 }
