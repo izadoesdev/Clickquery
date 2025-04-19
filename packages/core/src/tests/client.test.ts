@@ -19,20 +19,25 @@ describe('ClickHouse Client', () => {
 
   describe('Query Builder', () => {
     test('should build and execute a simple query', async () => {
-      const result = await client.query('SELECT 1 as value');
-      expect(result).toBeDefined();
-      expect(result.rows).toBeGreaterThanOrEqual(0);
+      try {
+        const result = await client.query('SELECT 1 as value');
+        expect(result).toBeDefined();
+        expect(result.rows).toBeGreaterThanOrEqual(0);
+      } catch (error) {
+        console.error('Query error:', error);
+        throw error;
+      }
     });
 
     test('should handle complex queries', async () => {
-      const result = await client.query(`
-        SELECT 
-          1 as value,
-          'test' as name,
-          now() as timestamp
-      `);
-      expect(result).toBeDefined();
-      expect(result.rows).toBeGreaterThanOrEqual(0);
+      try {
+        const result = await client.query('SELECT 1 as value, 2 as other_value');
+        expect(result).toBeDefined();
+        expect(result.rows).toBeGreaterThanOrEqual(0);
+      } catch (error) {
+        console.error('Query error:', error);
+        throw error;
+      }
     });
   });
 

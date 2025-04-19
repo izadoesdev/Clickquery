@@ -33,8 +33,7 @@ export class DatabaseManager {
     // Create database if it doesn't exist
     await this.client.query(`CREATE DATABASE IF NOT EXISTS ${this.database}`);
     
-    // Switch to the database
-    await this.client.query(`USE ${this.database}`);
+    // No need to run USE statement as ClickHouse client handles database selection
   }
 
   async ensureTable(model: Model) {
@@ -67,8 +66,11 @@ export class DatabaseManager {
     const orderBy = model.orderBy ? `ORDER BY (${model.orderBy.join(', ')})` : '';
     const partitionBy = model.partitionBy ? `PARTITION BY ${model.partitionBy}` : '';
 
+    // Use fully qualified table name
+    const tableName = `${this.database}.${model.name}`;
+
     await this.client.query(`
-      CREATE TABLE IF NOT EXISTS ${model.name} (
+      CREATE TABLE IF NOT EXISTS ${tableName} (
         ${columns}
       ) ENGINE = ${model.engine}
       ${orderBy}
@@ -88,8 +90,11 @@ export class DatabaseManager {
       });
 
     if (newColumns.length > 0) {
+      // Use fully qualified table name
+      const tableName = `${this.database}.${model.name}`;
+      
       await this.client.query(`
-        ALTER TABLE ${model.name}
+        ALTER TABLE ${tableName}
         ${newColumns.join(',\n')}
       `);
     }
@@ -104,10 +109,12 @@ export class DatabaseManager {
   }
 
   async dropTable(tableName: string) {
-    await this.client.query(`DROP TABLE IF EXISTS ${tableName}`);
+    // Use fully qualified table name
+    const fullTableName = `${this.database}.${tableName}`;
+    await this.client.query(`DROP TABLE IF EXISTS ${fullTableName}`);
   }
 
   async close() {
-    // Add any cleanup logic here if needed
+    // TODO- Cleanup
   }
 } 

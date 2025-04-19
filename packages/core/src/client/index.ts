@@ -15,7 +15,7 @@ class QueryBuilderImpl<T extends Model> implements QueryBuilder<T> {
   private query: string;
   private conditions: string[];
 
-  constructor(private client: ReturnType<typeof createClickHouseClient>, private table: string) {
+  constructor(private client: ClickQueryClient, private table: string) {
     this.query = `SELECT * FROM ${table}`;
     this.conditions = [];
   }
@@ -51,31 +51,8 @@ class QueryBuilderImpl<T extends Model> implements QueryBuilder<T> {
   }
 
   private async execute(): Promise<QueryResult<T>> {
-    const result = await this.client.query({
-      query: this.query,
-      format: 'JSON',
-    });
-
-    let response: unknown[];
-    try {
-      const responseText = await result.text();
-      response = responseText ? JSON.parse(responseText) : [];
-    } catch (parseError) {
-      // Handle empty responses or invalid JSON
-      response = [];
-    }
-
-    const data = Array.isArray(response) ? response as unknown as T[] : [response] as unknown as T[];
-    
-    return {
-      data,
-      rows: data.length,
-      statistics: {
-        elapsed: 0,
-        rows_read: 0,
-        bytes_read: 0,
-      },
-    };
+    // Use the client's query method which will handle all the necessary formatting
+    return this.client.query<T>(this.query);
   }
 }
 
@@ -107,9 +84,15 @@ export class ClickQueryClient {
 
   async query<T = unknown>(query: string, options?: QueryOptions): Promise<QueryResult<T>> {
     try {
+      // Remove any FORMAT clause from the query if present
+      let cleanQuery = query;
+      if (query.toUpperCase().includes('FORMAT')) {
+        cleanQuery = query.replace(/FORMAT\s+[A-Za-z]+/i, '').trim();
+      }
+      
       const result = await this.client.query({
-        query,
-        format: options?.format || 'JSON',
+        query: cleanQuery,
+        format: 'JSON',
         query_id: options?.query_id,
       });
 
@@ -142,7 +125,7 @@ export class ClickQueryClient {
   }
 
   select<T extends Model>(model: T): QueryBuilder<T> {
-    return new QueryBuilderImpl<T>(this.client, model.name);
+    return new QueryBuilderImpl<T>(this, model.name);
   }
 
   async insert<T extends Model>(model: T, data: Partial<T['columns']>): Promise<QueryResult<T>> {
