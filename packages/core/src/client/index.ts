@@ -84,14 +84,9 @@ export class ClickQueryClient {
 
   async query<T = unknown>(query: string, options?: QueryOptions): Promise<QueryResult<T>> {
     try {
-      // Remove any FORMAT clause from the query if present
-      let cleanQuery = query;
-      if (query.toUpperCase().includes('FORMAT')) {
-        cleanQuery = query.replace(/FORMAT\s+[A-Za-z]+/i, '').trim();
-      }
       
       const result = await this.client.query({
-        query: cleanQuery,
+        query: query,
         format: 'JSON',
         query_id: options?.query_id,
       });
@@ -128,7 +123,7 @@ export class ClickQueryClient {
     return new QueryBuilderImpl<T>(this, model.name);
   }
 
-  async insert<T extends Model>(model: T, data: Partial<T['columns']>): Promise<QueryResult<T>> {
+  async insert<T extends Model>(model: T, data: Record<string, unknown>): Promise<QueryResult<T>> {
     const columns = Object.keys(data).join(', ');
     const values = Object.values(data).map(v => this.formatValue(v)).join(', ');
     return this.query(`INSERT INTO ${model.name} (${columns}) VALUES (${values})`);

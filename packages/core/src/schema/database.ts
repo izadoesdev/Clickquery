@@ -81,22 +81,23 @@ export class DatabaseManager {
   async syncColumns(model: Model) {
     const existingColumns = await this.getColumns(model.name);
     const newColumns = Object.entries(model.columns)
-      .filter(([name]) => !existingColumns.has(name))
-      .map(([name, column]) => {
-        const options = column.options || {};
-        const nullable = options.nullable ? 'NULL' : 'NOT NULL';
-        const defaultVal = options.default ? `DEFAULT ${options.default}` : '';
-        return `ADD COLUMN ${name} ${column.type} ${nullable} ${defaultVal}`;
-      });
-
+      .filter(([name]) => !existingColumns.has(name));
+    
     if (newColumns.length > 0) {
       // Use fully qualified table name
       const tableName = `${this.database}.${model.name}`;
       
-      await this.client.query(`
-        ALTER TABLE ${tableName}
-        ${newColumns.join(',\n')}
-      `);
+      // Execute each ALTER TABLE ADD COLUMN statement separately
+      for (const [name, column] of newColumns) {
+        const options = column.options || {};
+        const nullable = options.nullable ? 'NULL' : 'NOT NULL';
+        const defaultVal = options.default ? `DEFAULT ${options.default}` : '';
+        
+        await this.client.query(`
+          ALTER TABLE ${tableName}
+          ADD COLUMN ${name} ${column.type} ${nullable} ${defaultVal}
+        `);
+      }
     }
   }
 
@@ -116,5 +117,10 @@ export class DatabaseManager {
 
   async close() {
     // TODO- Cleanup
+  }
+
+  // Add getter for testing
+  public getDatabase(): string {
+    return this.database;
   }
 } 
